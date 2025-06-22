@@ -13,6 +13,11 @@ const db = require('./Config/db')
 const departmentRoutes = require('./Routes/departmentRoutes');
 const courseRoutes = require('./Routes/courseRoutes');
 const studentRoutes = require('./Routes/studentRoutes');
+const teacherRoutes = require('./Routes/teacherRoutes');
+const studentEnrollRoutes = require('./Routes/studentEnrollRoutes');
+const teacherAssignRoutes = require('./Routes/teacherAssignRoutes');
+
+
 
 
 
@@ -42,6 +47,11 @@ app.get('/', (req, res) => {
 app.use('/departments', departmentRoutes);
 app.use('/courses', courseRoutes);
 app.use('/students', studentRoutes);
+app.use('/teacher', teacherRoutes);
+app.use('/studentenroll', studentEnrollRoutes);
+app.use('/teacherassign', teacherAssignRoutes);
+
+
 
 
 
