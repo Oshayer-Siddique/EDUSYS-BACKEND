@@ -1,4 +1,5 @@
 const db = require("../Config/db")
+const bcrypt = require("bcrypt");
 
 async function getAllStudents(req, res) {
     try {
@@ -17,32 +18,51 @@ async function createStudent(req, res) {
     `;
     const { student_id, name, email, password, address, date_of_birth, department, phone_number, blood_group } = req.body;
 
-    // Validate required input fields
     if (!student_id || !name || !email || !password) {
         return res.status(400).json({ message: 'Student ID, name, email, and password are required.' });
     }
 
-    // Check if the email or student_id is already taken
-    db.query('SELECT * FROM student WHERE email = ? OR student_id = ?', [email, student_id], (err, results) => {
-        if (err) {
-            console.error('Error checking email or student ID:', err);
-            return res.status(500).json({ message: 'Internal server error.' });
-        }
-        if (results.length > 0) {
+    try {
+        const [existing] = await db.promise().query(
+            'SELECT * FROM student WHERE email = ? OR student_id = ?',
+            [email, student_id]
+        );
+
+        if (existing.length > 0) {
             return res.status(400).json({ message: 'Email or Student ID already exists.' });
         }
 
-        // Proceed to insert the new student with student_id and additional fields
-        db.query(sql, [student_id, name, email, password, address, date_of_birth, department, phone_number, blood_group], (err, result) => {
-            if (err) {
-                console.error('Error inserting student:', err);
-                return res.status(500).json({ message: 'Internal server error.' });
-            }
-            res.status(201).json({ id: student_id, name, email , password, address, date_of_birth, department, phone_number, blood_group});
-        });
-    });
-}
+        const hashedPassword = await bcrypt.hash(password, 10); // 🔐 hash password
 
+        await db.promise().query(sql, [
+            student_id,
+            name,
+            email,
+            hashedPassword,
+            address,
+            date_of_birth,
+            department,
+            phone_number,
+            blood_group
+        ]);
+
+        res.status(201).json({
+            id: student_id,
+            name,
+            email,
+            password: '[ENCRYPTED]',
+            address,
+            date_of_birth,
+            department,
+            phone_number,
+            blood_group
+        });
+
+    } catch (err) {
+        console.error('Error creating student:', err);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+}
 
 async function getStudentById(req, res) {
     const sql = 'SELECT * FROM student WHERE student_id = ?';
@@ -74,7 +94,7 @@ async function updateStudent(req, res) {
     const updatedStudent = {};
     if (name) updatedStudent.name = name;
     if (email) updatedStudent.email = email;
-    if (password) updatedStudent.password = password;
+    if (password) updatedStudent.password = await bcrypt.hash(password, 10); // 🔐 hash new password
     if (address) updatedStudent.address = address;
     if (date_of_birth) updatedStudent.date_of_birth = date_of_birth;
     if (department) updatedStudent.department = department;
